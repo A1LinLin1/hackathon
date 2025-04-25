@@ -10,7 +10,7 @@
 ---
 
 ## 目录结构
-```
+```bash
 hackathon/
 ├── backend/               # 后端服务
 │   ├── package.json       # NPM 配置
@@ -84,6 +84,14 @@ npm start -- scan ./src
 1. **提交审计报告到链上**：在后端目录运行 `node submit.js`，将本地生成的审计报告通过 Sui 客户端提交到 `ReportStore` 合约。
 2. **查看审计报告**：在前端页面点击「加载报告」，将自动从后端拉取链上存储的报告并展示在表格中。
 3. **静态扫描 Move 源码**：运行 CLI 工具，对自定义 Move 模块进行访问控制、重入、溢出等多种安全检测。
+
+---
+
+## 前端展示
+
+在浏览器中访问 `http://localhost:3000` 后，你将看到如下界面：
+
+![前端审计报告页面](https://raw.githubusercontent.com/A1LinLin1/blog-images/main/hackathon.png)
 
 ---
 
