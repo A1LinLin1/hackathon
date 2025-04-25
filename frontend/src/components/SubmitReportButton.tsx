@@ -11,7 +11,28 @@ interface Finding {
   category: string;
 }
 
-// 辅助：hex 字符串 -> Uint8Array
+// —— 辅助函数：把非负整数做 LEB128 编码 —— 
+function encodeULEB128(n: number): Uint8Array {
+  const out: number[] = [];
+  do {
+    let byte = n & 0x7f;
+    n >>>= 7;
+    if (n !== 0) byte |= 0x80;
+    out.push(byte);
+  } while (n !== 0);
+  return Uint8Array.from(out);
+}
+
+// —— 辅助函数：给一个 Uint8Array 加上长度前缀，做成 BCS vector<u8> —— 
+function bcsEncodeVectorU8(bytes: Uint8Array): Uint8Array {
+  const prefix = encodeULEB128(bytes.length);
+  const buf = new Uint8Array(prefix.length + bytes.length);
+  buf.set(prefix, 0);
+  buf.set(bytes, prefix.length);
+  return buf;
+}
+
+// —— 辅助函数：hex 字符串 → Uint8Array —— 
 function hexToBytes(hex: string): Uint8Array {
   const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
   const bytes = new Uint8Array(clean.length / 2);
@@ -48,7 +69,7 @@ export function SubmitReportButton() {
     }
 
     try {
-      // 1. 静态审计
+      // —— 1. 静态审计 —— 
       setStatus('auditing');
       const source = await file.text();
       const auditRes = await fetch('/api/audit', {
@@ -65,29 +86,30 @@ export function SubmitReportButton() {
       setFindings(fRes);
       setCodeHash(hash);
 
-      // 2. 构造并签名 Transaction
+      // —— 2. 构造旧版 Transaction 并 BCS 编码参数 —— 
       setStatus('submitting');
       const tx = new Transaction();
-      const hashBytes = hexToBytes(hash);
-
-      // 先把 summary 编成字节
+      const hashBytes    = hexToBytes(hash);
+      const hashBcs      = bcsEncodeVectorU8(hashBytes);
       const summaryBytes = new TextEncoder().encode(summary);
+      const summaryBcs   = bcsEncodeVectorU8(summaryBytes);
 
       tx.moveCall({
         target: `${PACKAGE_ID}::ReportStore::submit`,
         arguments: [
-          tx.pure(hashBytes),      // vector<u8>
-          tx.pure(summaryBytes),   // vector<u8>
+          tx.pure(hashBcs),     // 传入完整 BCS bytes
+          tx.pure(summaryBcs),  // 传入完整 BCS bytes
         ],
       });
 
-      // 3. 调用 wallet 执行
-      const txResult = await wallet.signAndExecuteTransaction({
+      // —— 3. 用钱包发送（dry‐run 自动预算 + 签名执行），并固定预算 —— 
+      const result = await wallet.signAndExecuteTransaction({
         transaction: tx,
         options: { showEffects: true },
+        gasBudget: 50_000,
       });
 
-      setTxDigest(txResult.digest);
+      setTxDigest(result.digest);
       setStatus('done');
     } catch (e) {
       console.error('提交出错:', e);
@@ -105,7 +127,7 @@ export function SubmitReportButton() {
       />
       <button
         onClick={handleSubmit}
-        disabled={!file || wallet.status !== 'connected' || status === 'auditing' || status === 'submitting'}
+        disabled={!file || wallet.status !== 'connected' || ['auditing','submitting'].includes(status)}
         className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
       >
         {status === 'auditing'
