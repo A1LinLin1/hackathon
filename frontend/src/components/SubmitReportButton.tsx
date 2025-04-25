@@ -11,7 +11,7 @@ interface Finding {
   category: string;
 }
 
-// —— 辅助函数：把非负整数做 LEB128 编码 —— 
+// —— 辅助：LEB128 编码 —— 
 function encodeULEB128(n: number): Uint8Array {
   const out: number[] = [];
   do {
@@ -23,7 +23,7 @@ function encodeULEB128(n: number): Uint8Array {
   return Uint8Array.from(out);
 }
 
-// —— 辅助函数：给一个 Uint8Array 加上长度前缀，做成 BCS vector<u8> —— 
+// —— 辅助：BCS vector<u8> 编码 —— 
 function bcsEncodeVectorU8(bytes: Uint8Array): Uint8Array {
   const prefix = encodeULEB128(bytes.length);
   const buf = new Uint8Array(prefix.length + bytes.length);
@@ -32,7 +32,7 @@ function bcsEncodeVectorU8(bytes: Uint8Array): Uint8Array {
   return buf;
 }
 
-// —— 辅助函数：hex 字符串 → Uint8Array —— 
+// —— 辅助：hex 字符串 → Uint8Array —— 
 function hexToBytes(hex: string): Uint8Array {
   const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
   const bytes = new Uint8Array(clean.length / 2);
@@ -42,13 +42,13 @@ function hexToBytes(hex: string): Uint8Array {
   return bytes;
 }
 
-export function SubmitReportButton() {
+export function SubmitReportButton({ onSuccess }: { onSuccess: () => void }) {
   const wallet = useWallet();
   const [file, setFile] = useState<File | null>(null);
   const [findings, setFindings] = useState<Finding[]>([]);
   const [codeHash, setCodeHash] = useState<string>('');
-  const [status, setStatus] = useState<'idle' | 'auditing' | 'submitting' | 'done' | 'error'>('idle');
-  const [txDigest, setTxDigest] = useState<string | null>(null);
+  const [status, setStatus] = useState<'idle'|'auditing'|'submitting'|'done'|'error'>('idle');
+  const [txDigest, setTxDigest] = useState<string|null>(null);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFile(e.target.files?.[0] ?? null);
@@ -86,36 +86,42 @@ export function SubmitReportButton() {
       setFindings(fRes);
       setCodeHash(hash);
 
-      // —— 2. 构造旧版 Transaction 并 BCS 编码参数 —— 
+      // —— 2. 构造旧版 Transaction + BCS 编码参数 —— 
       setStatus('submitting');
       const tx = new Transaction();
-      const hashBytes    = hexToBytes(hash);
-      const hashBcs      = bcsEncodeVectorU8(hashBytes);
-      const summaryBytes = new TextEncoder().encode(summary);
-      const summaryBcs   = bcsEncodeVectorU8(summaryBytes);
+      const hashBcs    = bcsEncodeVectorU8(hexToBytes(hash));
+      const summaryBcs = bcsEncodeVectorU8(new TextEncoder().encode(summary));
 
       tx.moveCall({
         target: `${PACKAGE_ID}::ReportStore::submit`,
         arguments: [
-          tx.pure(hashBcs),     // 传入完整 BCS bytes
-          tx.pure(summaryBcs),  // 传入完整 BCS bytes
+          tx.pure(hashBcs),
+          tx.pure(summaryBcs),
         ],
       });
 
-      // —— 3. 用钱包发送（dry‐run 自动预算 + 签名执行），并固定预算 —— 
+      // —— 3. 发送：dry-run 自动预算 + 签名执行（固定 gasBudget 保底） —— 
       const result = await wallet.signAndExecuteTransaction({
         transaction: tx,
-        options: { showEffects: true },
-        gasBudget: 50_000,
+        options:     { showEffects: true },
+        gasBudget:   50_000,
       });
 
       setTxDigest(result.digest);
       setStatus('done');
+      // 延迟调用 onSuccess，保证链上数据已落地
+      setTimeout(onSuccess, 4000);
     } catch (e) {
       console.error('提交出错:', e);
       setStatus('error');
     }
   };
+
+  // 按 category 分组
+  const grouped = findings.reduce<Record<string, Finding[]>>((acc, f) => {
+    acc[f.category] = (acc[f.category] || []).concat(f);
+    return acc;
+  }, {});
 
   return (
     <div className="p-4 border rounded space-y-3">
@@ -123,36 +129,49 @@ export function SubmitReportButton() {
         type="file"
         accept=".move"
         onChange={handleFileChange}
-        disabled={status === 'auditing' || status === 'submitting'}
+        disabled={status==='auditing'||status==='submitting'}
       />
       <button
         onClick={handleSubmit}
-        disabled={!file || wallet.status !== 'connected' || ['auditing','submitting'].includes(status)}
+        disabled={!file||wallet.status!=='connected'||status==='auditing'||status==='submitting'}
         className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
       >
-        {status === 'auditing'
-          ? '静态审计中…'
-          : status === 'submitting'
-          ? '上链提交中…'
-          : '提交审计报告'}
+        {status==='auditing'  ? '静态审计中…'
+         :status==='submitting'? '上链提交中…'
+         :'提交审计报告'}
       </button>
 
-      {status === 'error' && <p className="text-red-500 text-sm">发生错误，请查看控制台。</p>}
+      {status==='error' && (
+        <p className="text-red-500 text-sm">发生错误，请查看控制台。</p>
+      )}
 
       {findings.length > 0 && (
         <div>
-          <h4 className="font-semibold">静态审计告警：</h4>
-          <ul className="list-disc ml-5 text-sm">
-            {findings.map((f, i) => (
-              <li key={i}>[行{f.line}, 列{f.col}] {f.category}: {f.message}</li>
+          <h4 className="font-semibold">静态审计告警（共 {findings.length} 条）：</h4>
+          <div className="space-y-2 max-h-40 overflow-y-auto text-sm">
+            {Object.entries(grouped).map(([cat, items]) => (
+              <details key={cat} className="border rounded p-2">
+                <summary className="font-medium">
+                  {cat} ({items.length} 条)
+                </summary>
+                <ul className="list-disc ml-5 mt-1">
+                  {items.map((f, i) => (
+                    <li key={i}>
+                      [行{f.line}, 列{f.col}] {f.message}
+                    </li>
+                  ))}
+                </ul>
+              </details>
             ))}
-          </ul>
+          </div>
           <p className="mt-2 text-sm"><strong>代码哈希：</strong> {codeHash}</p>
         </div>
       )}
 
-      {status === 'done' && txDigest && (
-        <p className="mt-2 text-sm text-green-600">提交成功 🎉 Tx 摘要：{txDigest}</p>
+      {status==='done' && txDigest && (
+        <p className="mt-2 text-sm text-green-600">
+          提交成功 🎉 Tx 摘要：{txDigest}
+        </p>
       )}
     </div>
   );
