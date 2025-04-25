@@ -1,17 +1,12 @@
 // src/main.tsx
-import React from "react";
-import ReactDOM from "react-dom/client";
-import App from "./App";
-// Suiet Wallet Kit Provider（包名一定是 @suiet/wallet-kit）
-import { WalletProvider } from "@suiet/wallet-kit";
-// 样式也要从 @suiet/wallet-kit 拿
-import "@suiet/wallet-kit/style.css";
+import ReactDOM from 'react-dom/client';
+import { WalletProvider } from '@suiet/wallet-kit';            // :contentReference[oaicite:0]{index=0}
+import '@suiet/wallet-kit/style.css';                         // 必须引入样式
+import App from './App';
 
-ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <WalletProvider defaultChain="testnet">
-      <App />
-    </WalletProvider>
-  </React.StrictMode>
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <WalletProvider>
+    <App />
+  </WalletProvider>
 );
 

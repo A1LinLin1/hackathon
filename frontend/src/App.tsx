@@ -2,7 +2,7 @@
 import React from "react";
 // ConnectButton 和 useWallet 都要从 @suiet/wallet-kit 拿
 import { ConnectButton, useWallet } from "@suiet/wallet-kit";
-import AuditPage from "./components/AuditPage";
+import { AuditPage } from "./components/AuditPage";
 
 export default function App() {
   const { account, disconnect } = useWallet();

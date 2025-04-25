@@ -1,65 +1,47 @@
-import { useEffect, useState } from 'react';
+// src/components/SubmitReportButton.tsx
+import React, { useState } from 'react';
+import { useWallet } from '@suiet/wallet-kit';                 // :contentReference[oaicite:1]{index=1}
+import { TransactionBlock, tx } from '@mysten/sui/transactions';
+import { PACKAGE_ID, client } from '../suiClient';             // 你的 SuiClient 实例
 
-export interface Report {
-  objectId:    string;
-  version:     string;
-  codeHash:    string;
-  resultSummary: string;
-}
+export function SubmitReportButton({ onSuccess }: { onSuccess?: () => void }) {
+  const wallet = useWallet();
+  const [status, setStatus] = useState<string>('');
 
-export default function AuditReportTable() {
-  const [reports, setReports]     = useState<Report[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [loading, setLoading]     = useState(false);
+  const handleSubmit = async () => {
+    // 1. 确保已连接
+    if (wallet.status !== 'connected' || !wallet.account?.address) {
+      return setStatus('请先连接钱包');
+    }
+    const address = wallet.account.address;
 
-  const fetchReports = async (cursor?: string) => {
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (cursor) params.set('cursor', cursor);
-    const res = await fetch(`/get-reports?${params.toString()}`);
-    const data = await res.json() as { reports: Report[]; nextCursor?: string };
-    setReports(prev => cursor ? [...prev, ...data.reports] : data.reports);
-    setNextCursor(data.nextCursor || null);
-    setLoading(false);
+    // 2. 构造交易
+    setStatus('提交中…');
+    const txBlock = new TransactionBlock().moveCall({
+      target: `${PACKAGE_ID}::ReportStore::submit`,
+      arguments: [
+        // …你的 codeHash 和 summary
+      ],
+    });
+
+    // 3. 签名并执行，一定要把 account.address 传进去
+    try {
+      const result = await wallet.signAndExecuteTransactionBlock({
+        transactionBlock: txBlock,
+        account: address,          // ← 这里不能是 undefined
+        gasBudget: 10000,
+      });
+      setStatus('提交成功，tx=' + result.digest);
+      onSuccess?.();
+    } catch (e: any) {
+      setStatus('提交失败：' + e.message);
+    }
   };
-
-  useEffect(() => { fetchReports(); }, []);
 
   return (
     <div>
-      <h2 className="text-2xl font-semibold mb-4">AuditReport 列表</h2>
-      <table className="min-w-full table-auto border-collapse mb-4">
-        <thead>
-          <tr className="bg-gray-100">
-            <th className="px-4 py-2 border">Object ID</th>
-            <th className="px-4 py-2 border">Version</th>
-            <th className="px-4 py-2 border">Code Hash</th>
-            <th className="px-4 py-2 border">Result Summary</th>
-          </tr>
-        </thead>
-        <tbody>
-          {reports.map(r => (
-            <tr key={r.objectId} className="hover:bg-gray-50">
-              <td className="px-4 py-2 border break-all">{r.objectId}</td>
-              <td className="px-4 py-2 border">{r.version}</td>
-              <td className="px-4 py-2 border font-mono text-sm break-all">{r.codeHash}</td>
-              <td className="px-4 py-2 border">{r.resultSummary}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {nextCursor && (
-        <button
-          onClick={() => fetchReports(nextCursor)}
-          disabled={loading}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-        >
-          {loading ? '加载中…' : '加载更多'}
-        </button>
-      )}
-      {!loading && !nextCursor && reports.length === 0 && (
-        <p className="text-gray-600">暂无报告</p>
-      )}
+      <button onClick={handleSubmit}>提交审计报告</button>
+      {status && <p>{status}</p>}
     </div>
   );
 }
