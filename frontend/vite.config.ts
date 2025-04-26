@@ -1,37 +1,42 @@
-// vite.config.ts（项目根目录）
+// vite.config.ts
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  resolve: {
-    alias: [
-      { find: /^@mysten\/sui$/, replacement: '@mysten/sui/client' }
-    ]
-  },
+  // … your existing resolve, server, etc. …
   optimizeDeps: {
-    exclude: ['@mysten/sui'],
     include: [
-      'bech32',
-      '@mysten/sui/client',
-      '@mysten/sui/transactions',
-      '@mysten/wallet-adapter-react',
-      '@mysten/wallet-adapter-sui-wallet',
-      '@suiet/wallet-kit',
-      'tweetnacl'
-    ]
-  },
-  server: {
-    proxy: {
-      // 所有 /api 前缀的请求都转发到后端
-      '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true
-      }
+      'react',
+      'react-dom',             // ← add this
+      'react/jsx-runtime',
+      'poseidon-lite',
+      // …other includes…
+    ],
+    commonjsOptions: {
+      include: [
+        /node_modules\/react\//,
+        /node_modules\/react-dom\//,   // ← and add this
+        /node_modules\/poseidon-lite/
+      ]
     }
   },
   build: {
-    sourcemap: false
+    sourcemap: false,
+    commonjsOptions: {
+      include: [
+        /node_modules\/react\//,
+        /node_modules\/react-dom\//,   // ← and add here too
+        /node_modules\/poseidon-lite/
+      ]
+    }
+  },
+  server: {
+    host: '0.0.0.0',
+    port: 5173,
+    strictPort: true,
+    allowedHosts: true,
+    proxy: { '/api': { target: 'http://localhost:3001', changeOrigin: true } }
   }
 });
 

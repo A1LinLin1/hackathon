@@ -55,6 +55,10 @@ export namespace Experimental_SuiClientTypes {
 		objectIds: string[];
 	}
 
+	export interface GetObjectOptions extends CoreClientMethodOptions {
+		objectId: string;
+	}
+
 	export interface GetOwnedObjectsOptions extends CoreClientMethodOptions {
 		address: string;
 		limit?: number;
@@ -80,6 +84,10 @@ export namespace Experimental_SuiClientTypes {
 
 	export interface GetObjectsResponse {
 		objects: (ObjectResponse | Error)[];
+	}
+
+	export interface GetObjectResponse {
+		object: ObjectResponse;
 	}
 
 	export interface GetOwnedObjectsResponse {
