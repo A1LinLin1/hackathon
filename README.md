@@ -89,7 +89,7 @@ npm start -- scan ./src
 
 ## 前端展示
 
-在浏览器中访问 `http://localhost:3000` 后，你将看到如下界面：
+在浏览器中访问 `http://localhost:5731` 后，你将看到如下界面：
 
 ![前端审计报告页面](https://raw.githubusercontent.com/A1LinLin1/blog-images/main/hackathon.png)
 
