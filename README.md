@@ -64,7 +64,7 @@ node server.js          # 启动服务，默认监听 http://localhost:3001
 ```bash
 cd frontend
 npm install
-npm run dev             # 启动 Vite 开发服务器，访问 http://localhost:3000
+npm run dev             # 启动 Vite 开发服务器，访问 http://localhost:5173
 ```
 
 ### 静态分析 CLI
