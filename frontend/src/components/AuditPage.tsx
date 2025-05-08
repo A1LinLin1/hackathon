@@ -109,7 +109,7 @@ export function AuditPage() {
         <h2 className="text-lg font-semibold">我的审计报告</h2>
         <button
           onClick={fetchReports}
-          className="px-2 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+          className="ml-2 text-sm text-blue-600 hover:underline"
         >
           刷新列表
         </button>

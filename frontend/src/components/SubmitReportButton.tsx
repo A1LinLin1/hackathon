@@ -11,7 +11,7 @@ interface Finding {
   category: string;
 }
 
-// —— 辅助：LEB128 编码 —— 
+// —— 辅助：LEB128 编码 ——
 function encodeULEB128(n: number): Uint8Array {
   const out: number[] = [];
   do {
@@ -23,7 +23,7 @@ function encodeULEB128(n: number): Uint8Array {
   return Uint8Array.from(out);
 }
 
-// —— 辅助：BCS vector<u8> 编码 —— 
+// —— 辅助：BCS vector<u8> 编码 ——
 function bcsEncodeVectorU8(bytes: Uint8Array): Uint8Array {
   const prefix = encodeULEB128(bytes.length);
   const buf = new Uint8Array(prefix.length + bytes.length);
@@ -32,7 +32,7 @@ function bcsEncodeVectorU8(bytes: Uint8Array): Uint8Array {
   return buf;
 }
 
-// —— 辅助：hex 字符串 → Uint8Array —— 
+// —— 辅助：hex 字符串 → Uint8Array ——
 function hexToBytes(hex: string): Uint8Array {
   const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
   const bytes = new Uint8Array(clean.length / 2);
@@ -69,7 +69,7 @@ export function SubmitReportButton({ onSuccess }: { onSuccess: () => void }) {
     }
 
     try {
-      // —— 1. 静态审计 —— 
+      // —— 1. 静态审计 ——
       setStatus('auditing');
       const source = await file.text();
       const auditRes = await fetch('/api/audit', {
@@ -86,7 +86,7 @@ export function SubmitReportButton({ onSuccess }: { onSuccess: () => void }) {
       setFindings(fRes);
       setCodeHash(hash);
 
-      // —— 2. 构造旧版 Transaction + BCS 编码参数 —— 
+      // —— 2. 构造旧版 Transaction + BCS 编码参数 ——
       setStatus('submitting');
       const tx = new Transaction();
       const hashBcs    = bcsEncodeVectorU8(hexToBytes(hash));
@@ -100,7 +100,7 @@ export function SubmitReportButton({ onSuccess }: { onSuccess: () => void }) {
         ],
       });
 
-      // —— 3. 发送：dry-run 自动预算 + 签名执行（固定 gasBudget 保底） —— 
+      // —— 3. 发送：dry-run 自动预算 + 签名执行（固定 gasBudget 保底） ——
       const result = await wallet.signAndExecuteTransaction({
         transaction: tx,
         options:     { showEffects: true },
@@ -125,16 +125,25 @@ export function SubmitReportButton({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <div className="p-4 border rounded space-y-3">
+      {/* 文件选择按钮 */}
       <input
         type="file"
         accept=".move"
         onChange={handleFileChange}
         disabled={status==='auditing'||status==='submitting'}
+        className="
+          file:bg-blue-400 file:text-white file:px-4 file:py-2
+          file:rounded file:border-0 file:cursor-pointer
+          hover:file:bg-blue-500
+          disabled:file:bg-gray-300 disabled:cursor-not-allowed
+        "
       />
+
+      {/* 提交按钮 */}
       <button
         onClick={handleSubmit}
         disabled={!file||wallet.status!=='connected'||status==='auditing'||status==='submitting'}
-        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+        className="px-4 py-2 bg-blue-400 text-white rounded hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {status==='auditing'  ? '静态审计中…'
          :status==='submitting'? '上链提交中…'
@@ -176,3 +185,4 @@ export function SubmitReportButton({ onSuccess }: { onSuccess: () => void }) {
     </div>
   );
 }
+
