@@ -15,7 +15,7 @@ export default function App() {
       <nav className="bg-white dark:bg-gray-800 shadow-md">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-gray-800 dark:text-white">
-            Sui Move 审计平台
+            智能合约审计平台
           </h1>
           <div className="flex items-center space-x-4">
             <ConnectButton className="!px-4 !py-2" />

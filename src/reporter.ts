@@ -1,15 +1,9 @@
 // src/reporter.ts
 import type { Finding } from './types';
 
-/**
- * Turn an array of findings into a readable text report.
- */
-export function formatFindings(findings: Finding[]): string {
-  if (findings.length === 0) {
-    return '未发现漏洞';
-  }
-  return findings
-    .map(f => `[${f.line}:${f.col}] ${f.message}`)
+export function formatFindings(fs: Finding[]): string {
+  return fs
+    .map(f => `[${f.file}:${f.line}:${f.col ?? 0}] ${f.type} - ${f.message}`)
     .join('\n');
 }
 

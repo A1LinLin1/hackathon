@@ -1,22 +1,56 @@
 // src/parser.ts
-import { detectAccessControl    } from './detectors/accessControl';
-import { detectCallSafety       } from './detectors/callSafety';
-import { detectFreezeBypass     } from './detectors/freezeBypass';
-import { detectLogicDefect      } from './detectors/logicDefect';
-import { detectOverflow         } from './detectors/overflow';
-import { detectRandomnessMisuse } from './detectors/randomnessMisuse';
-import { detectReentrancy       } from './detectors/reentrancy';
-import type { Finding }         from './types';
+import type { Finding } from './types';
+import { analyze } from './analyzer/index.js';
 
-export function auditMoveSource(source: string): Finding[] {
-  return [
-    ...detectAccessControl(source),
-    ...detectCallSafety(source),
-    ...detectFreezeBypass(source),
-    ...detectLogicDefect(source),
-    ...detectOverflow(source),
-    ...detectRandomnessMisuse(source),
-    ...detectReentrancy(source),
-  ];
+/**
+ * 审计 Move 源码
+ */
+export async function auditSource(
+  source: string,
+  filePath: string
+): Promise<Finding[]> {
+  return analyze('move', source, filePath);
 }
+
+/**
+ * 审计 Solidity 源码
+ */
+export async function analyzeSolidity(
+  source: string,
+  filePath: string
+): Promise<Finding[]> {
+  return analyze('solidity', source, filePath);
+}
+
+/**
+ * 审计 Vyper 源码
+ */
+export async function analyzeVyper(
+  source: string,
+  filePath: string
+): Promise<Finding[]> {
+  return analyze('vyper', source, filePath);
+}
+
+/**
+ * 审计 Go 源码
+ */
+export async function analyzeGo(
+  source: string,
+  filePath: string
+): Promise<Finding[]> {
+  return analyze('go', source, filePath);
+}
+
+/**
+ * 审计 Rust 源码
+ */
+export async function analyzeRust(
+  source: string,
+  filePath: string
+): Promise<Finding[]> {
+  return analyze('rs', source, filePath);
+}
+
+export type { Finding };
 
