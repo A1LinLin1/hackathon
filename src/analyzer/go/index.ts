@@ -10,6 +10,7 @@ import {
   checkGoFreezeBypass,            // 单数
 } from '../../detectors/index.js';
 import { Parser } from 'web-tree-sitter';
+import type { Language } from 'web-tree-sitter';
 import GoLang from 'tree-sitter-go';
 
 const goAnalyzer: Analyzer = {
@@ -17,8 +18,9 @@ const goAnalyzer: Analyzer = {
   async analyze(source: string, filePath: string): Promise<Finding[]> {
     await Parser.init();
     const p = new Parser();
-    p.setLanguage(GoLang);
+    p.setLanguage(GoLang as unknown as Language);
     const tree = p.parse(source);
+    if (!tree) throw new Error(`Go source parse failed: ${filePath}`);
 
     const findings: Finding[] = [];
     findings.push(...await checkGoOverflow(tree, filePath));

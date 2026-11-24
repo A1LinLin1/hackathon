@@ -10,6 +10,7 @@ import {
   checkRustFreezeBypass,
 } from '../../detectors/index.js';
 import { Parser } from 'web-tree-sitter';
+import type { Language } from 'web-tree-sitter';
 import RustLang from 'tree-sitter-rust';
 
 const rustAnalyzer: Analyzer = {
@@ -17,8 +18,9 @@ const rustAnalyzer: Analyzer = {
   async analyze(source: string, filePath: string): Promise<Finding[]> {
     await Parser.init();
     const parser = new Parser();
-    parser.setLanguage(RustLang);
+    parser.setLanguage(RustLang as unknown as Language);
     const tree = parser.parse(source);
+    if (!tree) throw new Error(`Rust source parse failed: ${filePath}`);
 
     const findings: Finding[] = [];
     findings.push(...await checkRustOverflow(tree, filePath));

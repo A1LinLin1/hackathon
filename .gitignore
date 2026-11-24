@@ -169,3 +169,7 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Local POC evidence bundle and its isolated build environment
+poc_task_artifacts/
+.venv-artifacts/
